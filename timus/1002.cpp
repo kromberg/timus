@@ -5,6 +5,7 @@
 #include <vector>
 #include <list>
 #include <unordered_set>
+#include <algorithm>
 
 #include "1002.h"
 
@@ -15,6 +16,7 @@ struct WordNumber
 {
     std::string m_word;
     std::string m_number;
+    int8_t m_used = false;
     bool operator< (const WordNumber& wn) const
     {
         return m_number < wn.m_number;
@@ -49,10 +51,9 @@ char mapping(char c)
 
 bool getWords(
     std::list<std::vector<WordNumber>::const_iterator>& result,
-    std::unordered_set<const WordNumber*>& numbersUsed,
     const std::string& number,
     size_t position,
-    const std::vector<WordNumber>& wordNumbers)
+    std::vector<WordNumber>& wordNumbers)
 {
     std::cout << "Number: " << number << "; position: " << position << '\n';
     if (number.size() == position)
@@ -70,8 +71,7 @@ bool getWords(
     std::cout << "Lower bound: " << it->m_number << "; c[0] = " << c[0] << '\n';
     while (wordNumbers.end() != it && it->m_number[0] == c[0])
     {
-        auto numberIt = numbersUsed.find(&(*it));
-        if (numbersUsed.end() != numberIt)
+        if (it->m_used)
         {
             ++ it;
             continue;
@@ -79,8 +79,8 @@ bool getWords(
         if (!number.compare(position, it->m_number.size(), it->m_number))
         {
             std::list<std::vector<WordNumber>::const_iterator> tmpResult;
-            numbersUsed.insert(&(*it));
-            if (getWords(tmpResult, numbersUsed, number, position + it->m_number.size(), wordNumbers))
+            it->m_used = true;
+            if (getWords(tmpResult, number, position + it->m_number.size(), wordNumbers))
             {
                 tmpResult.push_front(it);
                 std::cout << "Adding " << it->m_word << '\n';
@@ -89,7 +89,7 @@ bool getWords(
                     result = std::move(tmpResult);
                 }
             }
-            numbersUsed.erase(&(*it));
+            it->m_used = false;
         }
 
         ++ it;
@@ -124,9 +124,8 @@ void solve(std::istream& in, std::ostream& out)
         std::sort(wordNumbers.begin(), wordNumbers.end());
 
         std::list<std::vector<WordNumber>::const_iterator> res;
-        std::unordered_set<const WordNumber*> numbersUsed;
 
-        if (getWords(res, numbersUsed, number, 0, wordNumbers))
+        if (getWords(res, number, 0, wordNumbers))
         {
             for (const auto& it : res)
             {

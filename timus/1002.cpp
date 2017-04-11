@@ -12,23 +12,7 @@
 namespace n1002
 {
 
-struct WordNumber
-{
-    std::string m_word;
-    std::string m_number;
-    int8_t m_used = false;
-    bool operator< (const WordNumber& wn) const
-    {
-        return m_number < wn.m_number;
-    }
-
-    bool operator< (const std::string& number) const
-    {
-        return m_number < number;
-    }
-};
-
-char mapping(char c)
+static char mapping(char c)
 {
     static char charToNumber[] =
     {
@@ -49,10 +33,70 @@ char mapping(char c)
     return charToNumber[c - 'a'];
 }
 
+struct WordNumber
+{
+    std::string m_word;
+
+    int8_t m_used = false;
+
+    bool operator< (const WordNumber& wn) const
+    {
+        uint8_t i1 = 0, i2 = 0, size1 = m_word.size(), size2 = wn.m_word.size();
+        for (; i1 < size1 && i2 < size2; ++i1, ++i2)
+        {
+            char c1 = mapping(m_word[i1]);
+            char c2 = mapping(wn.m_word[i2]);
+            if (c1 < c2)
+            {
+                return true;
+            }
+            else if (c1 > c2)
+            {
+                return false;
+            }
+        }
+        return size1 < size2;
+    }
+
+    bool operator< (const std::string& number) const
+    {
+        uint8_t i1 = 0, i2 = 0, size1 = m_word.size(), size2 = number.size();
+        for (; i1 < size1 && i2 < size2; ++i1, ++i2)
+        {
+            char c1 = mapping(m_word[i1]);
+            char c2 = number[i2];
+            if (c1 < c2)
+            {
+                return true;
+            }
+            else if (c1 > c2)
+            {
+                return false;
+            }
+        }
+        return size1 < size2;
+    }
+};
+
+static bool compare(const std::string& number, const size_t pos, const std::string& word)
+{
+    const uint8_t numberSize = number.size();
+    const uint8_t wordSize = word.size();
+    uint8_t numberI = pos, wordI = 0;
+    for (; numberI < numberSize && wordI < wordSize; ++numberI, ++wordI)
+    {
+        if (number[numberI] != mapping(word[wordI]))
+        {
+            return false;
+        }
+    }
+    return wordI == wordSize;
+}
+
 bool getWords(
-    std::list<std::vector<WordNumber>::const_iterator>& result,
+    std::list<uint16_t>& result,
     const std::string& number,
-    size_t position,
+    uint8_t position,
     std::vector<WordNumber>& wordNumbers)
 {
     std::cout << "Number: " << number << "; position: " << position << '\n';
@@ -68,21 +112,21 @@ bool getWords(
         std::cout << "Lower bound is not found" << '\n';
         return false;
     }
-    std::cout << "Lower bound: " << it->m_number << "; c[0] = " << c[0] << '\n';
-    while (wordNumbers.end() != it && it->m_number[0] == c[0])
+    std::cout << "Lower bound: " << it->m_word << "; c[0] = " << c[0] << '\n';
+    while (wordNumbers.end() != it && mapping(it->m_word[0]) == c[0])
     {
         if (it->m_used)
         {
             ++ it;
             continue;
         }
-        if (!number.compare(position, it->m_number.size(), it->m_number))
+        if (compare(number, position, it->m_word))
         {
-            std::list<std::vector<WordNumber>::const_iterator> tmpResult;
+            std::list<uint16_t> tmpResult;
             it->m_used = true;
-            if (getWords(tmpResult, number, position + it->m_number.size(), wordNumbers))
+            if (getWords(tmpResult, number, position + it->m_word.size(), wordNumbers))
             {
-                tmpResult.push_front(it);
+                tmpResult.push_front(std::distance(wordNumbers.begin(), it));
                 std::cout << "Adding " << it->m_word << '\n';
                 if (result.empty() || tmpResult.size() < result.size())
                 {
@@ -110,27 +154,26 @@ void solve(std::istream& in, std::ostream& out)
     in >> number;
     while (number != "-1")
     {
-        size_t wordsCount;
+        uint16_t wordsCount;
         in >> wordsCount;
         std::vector<WordNumber> wordNumbers(wordsCount);
-        for (size_t i = 0; i < wordsCount; ++i)
+        for (uint16_t i = 0; i < wordsCount; ++i)
         {
             in >> wordNumbers[i].m_word;
-            wordNumbers[i].m_number.reserve(wordNumbers[i].m_word.size() + 1);
+            /*wordNumbers[i].m_number.reserve(wordNumbers[i].m_word.size() + 1);
             std::transform(
                 wordNumbers[i].m_word.begin(), wordNumbers[i].m_word.end(),
-                std::back_inserter(wordNumbers[i].m_number), mapping);
+                std::back_inserter(wordNumbers[i].m_number), mapping);*/
             //std::cout << wordNumbers[i].m_word << " -> " << wordNumbers[i].m_number << '\n';
         }
         std::sort(wordNumbers.begin(), wordNumbers.end());
 
-        std::list<std::vector<WordNumber>::const_iterator> res;
-
+        std::list<uint16_t> res;
         if (getWords(res, number, 0, wordNumbers))
         {
-            for (const auto& it : res)
+            for (const auto idx : res)
             {
-                out << it->m_word << ' ';
+                out << wordNumbers[idx].m_word << ' ';
             }
             out << '\n';
         }

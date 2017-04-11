@@ -7,8 +7,6 @@
 #include <unordered_set>
 #include <algorithm>
 
-#include "1002.h"
-
 namespace n1002
 {
 
@@ -55,20 +53,20 @@ bool getWords(
     size_t position,
     std::vector<WordNumber>& wordNumbers)
 {
-    std::cout << "Number: " << number << "; position: " << position << '\n';
+    
     if (number.size() == position)
     {
-        std::cout << "The end of the number is reached" << '\n';
+        
         return true;
     }
     std::string c(1, number[position]);
     auto it = std::lower_bound(wordNumbers.begin(), wordNumbers.end(), c);
     if (wordNumbers.end() == it)
     {
-        std::cout << "Lower bound is not found" << '\n';
+        
         return false;
     }
-    std::cout << "Lower bound: " << it->m_number << "; c[0] = " << c[0] << '\n';
+    
     while (wordNumbers.end() != it && it->m_number[0] == c[0])
     {
         if (it->m_used)
@@ -83,7 +81,7 @@ bool getWords(
             if (getWords(tmpResult, number, position + it->m_number.size(), wordNumbers))
             {
                 tmpResult.push_front(it);
-                std::cout << "Adding " << it->m_word << '\n';
+                
                 if (result.empty() || tmpResult.size() < result.size())
                 {
                     result = std::move(tmpResult);
@@ -97,7 +95,7 @@ bool getWords(
 
     if (result.empty())
     {
-        std::cout << "Result is empty" << '\n';
+        
         return false;
     }
 
@@ -116,11 +114,11 @@ void solve(std::istream& in, std::ostream& out)
         for (size_t i = 0; i < wordsCount; ++i)
         {
             in >> wordNumbers[i].m_word;
-            wordNumbers[i].m_number.reserve(wordNumbers[i].m_word.size() + 1);
+            wordNumbers[i].m_number.reserve(wordNumbers[i].m_word.size());
             std::transform(
                 wordNumbers[i].m_word.begin(), wordNumbers[i].m_word.end(),
                 std::back_inserter(wordNumbers[i].m_number), mapping);
-            //std::cout << wordNumbers[i].m_word << " -> " << wordNumbers[i].m_number << '\n';
+            //
         }
         std::sort(wordNumbers.begin(), wordNumbers.end());
 
@@ -143,3 +141,14 @@ void solve(std::istream& in, std::ostream& out)
 }
 
 } // namespace n1002
+
+
+int32_t main(int32_t argc, char* argv[])
+{
+    std::ifstream fin("in.txt");
+    std::ofstream fout("out.txt");
+
+    n1002::solve(fin, fout);
+
+    return 0;
+}

@@ -1,3 +1,4 @@
+
 #include <cstdint>
 #include <string>
 #include <fstream>
@@ -34,61 +35,24 @@ static char mapping(char c)
 struct WordNumber
 {
     std::string m_word;
+    std::string m_number;
 
     int8_t m_used = false;
 
     bool operator< (const WordNumber& wn) const
     {
-        uint8_t i1 = 0, i2 = 0, size1 = m_word.size(), size2 = wn.m_word.size();
-        for (; i1 < size1 && i2 < size2; ++i1, ++i2)
-        {
-            char c1 = mapping(m_word[i1]);
-            char c2 = mapping(wn.m_word[i2]);
-            if (c1 < c2)
-            {
-                return true;
-            }
-            else if (c1 > c2)
-            {
-                return false;
-            }
-        }
-        return size1 < size2;
+        return m_number < wn.m_number;
     }
 
     bool operator< (const std::string& number) const
     {
-        uint8_t i1 = 0, i2 = 0, size1 = m_word.size(), size2 = number.size();
-        for (; i1 < size1 && i2 < size2; ++i1, ++i2)
-        {
-            char c1 = mapping(m_word[i1]);
-            char c2 = number[i2];
-            if (c1 < c2)
-            {
-                return true;
-            }
-            else if (c1 > c2)
-            {
-                return false;
-            }
-        }
-        return size1 < size2;
+        return m_number < number;
     }
 };
 
-static bool compare(const std::string& number, const size_t pos, const std::string& word)
+static bool compare(const std::string& number, const size_t pos, const std::string& number2)
 {
-    const uint8_t numberSize = number.size();
-    const uint8_t wordSize = word.size();
-    uint8_t numberI = pos, wordI = 0;
-    for (; numberI < numberSize && wordI < wordSize; ++numberI, ++wordI)
-    {
-        if (number[numberI] != mapping(word[wordI]))
-        {
-            return false;
-        }
-    }
-    return wordI == wordSize;
+    return !number.compare(pos, number2.size(), number2);
 }
 
 bool getWords(
@@ -111,18 +75,18 @@ bool getWords(
         return false;
     }
     
-    while (wordNumbers.end() != it && mapping(it->m_word[0]) == c[0])
+    while (wordNumbers.end() != it && it->m_number[0] == c[0])
     {
         if (it->m_used)
         {
             ++ it;
             continue;
         }
-        if (compare(number, position, it->m_word))
+        if (compare(number, position, it->m_number))
         {
             std::list<uint16_t> tmpResult;
             it->m_used = true;
-            if (getWords(tmpResult, number, position + it->m_word.size(), wordNumbers))
+            if (getWords(tmpResult, number, position + it->m_number.size(), wordNumbers))
             {
                 tmpResult.push_front(std::distance(wordNumbers.begin(), it));
                 
@@ -158,10 +122,10 @@ void solve(std::istream& in, std::ostream& out)
         for (uint16_t i = 0; i < wordsCount; ++i)
         {
             in >> wordNumbers[i].m_word;
-            /*wordNumbers[i].m_number.reserve(wordNumbers[i].m_word.size() + 1);
+            wordNumbers[i].m_number.reserve(wordNumbers[i].m_word.size() + 1);
             std::transform(
                 wordNumbers[i].m_word.begin(), wordNumbers[i].m_word.end(),
-                std::back_inserter(wordNumbers[i].m_number), mapping);*/
+                std::back_inserter(wordNumbers[i].m_number), mapping);
             //
         }
         std::sort(wordNumbers.begin(), wordNumbers.end());

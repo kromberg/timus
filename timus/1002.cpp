@@ -4,8 +4,10 @@
 #include <iostream>
 #include <vector>
 #include <list>
-#include <unordered_set>
+#include <unordered_map>
 #include <algorithm>
+#include <array>
+#include <memory>
 
 #include "1002.h"
 
@@ -37,77 +39,135 @@ struct WordNumber
 {
     std::string m_word;
     std::string m_number;
+};
 
-    int8_t m_used = false;
+struct NumberCount
+{
+    std::array<std::unique_ptr<NumberCount>, 10> m_numbers;
+    std::list<uint16_t> m_indices;
 
-    bool operator< (const WordNumber& wn) const
+    void setNumber(const char* word, const size_t size, const uint16_t index)
     {
-        return m_number < wn.m_number;
+        if (0 == size)
+        {
+            m_indices.push_back(index);
+            return ;
+        }
+        uint16_t idx = static_cast<uint16_t>(mapping(*word) - '0');
+        if (!m_numbers[idx])
+        {
+            m_numbers[idx].reset(new NumberCount);
+        }
+        m_numbers[idx]->setNumber(word + 1, size - 1, index);
     }
 
-    bool operator< (const std::string& number) const
+    void getNumbers(
+        std::list<NumberCount*>& res,
+        const char* number,
+        const size_t size)
     {
-        return m_number < number;
+        if (!m_indices.empty())
+        {
+            res.push_back(this);
+        }
+
+        if (0 == size)
+        {
+            return ;
+        }
+
+        uint16_t idx = static_cast<uint16_t>(*number - '0');
+        if (!m_numbers[idx])
+        {
+            return ;
+        }
+
+        m_numbers[idx]->getNumbers(res, number + 1, size - 1);
+    }
+
+    void print(std::ostream& out, const std::string& spaces=std::string(""))
+    {
+        if (!m_indices.empty())
+        {
+            out << spaces << "indices : ";
+            for (auto idx : m_indices)
+            {
+                out << idx << " ";
+            }
+            out << '\n';
+        }
+        for (size_t i = 0; i < 10; ++i)
+        {
+            if (m_numbers[i])
+            {
+                out << spaces << "[" << i << "] : ";
+                out << '\n';
+                out << spaces << "{\n";
+                m_numbers[i]->print(out, spaces + std::string(" "));
+                out << spaces << "}\n";
+            }
+        }
     }
 };
 
-static bool compare(const std::string& number, const size_t pos, const std::string& number2)
+bool getNumbers(
+    std::list<uint16_t>& numbers,
+    const char* number,
+    const size_t size,
+    NumberCount& numberCount,
+    std::vector<std::string>& words,
+    int16_t resultSize = 0)
 {
-    return !number.compare(pos, number2.size(), number2);
-}
-
-bool getWords(
-    std::list<uint16_t>& result,
-    const std::string& number,
-    uint8_t position,
-    std::vector<WordNumber>& wordNumbers)
-{
-    std::cout << "Number: " << number << "; position: " << (uint32_t)position << '\n';
-    if (number.size() == position)
+    if (0 == size)
     {
-        std::cout << "The end of the number is reached" << '\n';
         return true;
     }
-    std::string c(1, number[position]);
-    auto it = std::lower_bound(wordNumbers.begin(), wordNumbers.end(), c);
-    if (wordNumbers.end() == it)
+
+    if (resultSize != 0 && resultSize <= numbers.size() + 1)
     {
-        std::cout << "Lower bound is not found" << '\n';
         return false;
     }
-    std::cout << "Lower bound: " << it->m_word << "; c[0] = " << c[0] << '\n';
-    while (wordNumbers.end() != it && it->m_number[0] == c[0])
+
+    std::cout << "Number: " << number << "; size: " << size << '\n';
+
+    std::list<NumberCount*> currNumbers;
+
+    numberCount.getNumbers(currNumbers, number, size);
+
+    if (currNumbers.empty())
     {
-        if (it->m_used)
+        return false;
+    }
+
+    std::cout << currNumbers.size() << " found\n";
+
+    for (auto currNumber : currNumbers)
+    {
+        uint16_t currIdx = currNumber->m_indices.front();
+        currNumber->m_indices.pop_front();
+        std::cout << "Processing " << words[currIdx] << "\n";
+        std::list<uint16_t> tmpNumbers;
+        
+        if (getNumbers(tmpNumbers, number + words[currIdx].size(), size - words[currIdx].size(), numberCount, words,
+            numbers.size()))
         {
-            ++ it;
-            continue;
-        }
-        if (compare(number, position, it->m_number))
-        {
-            std::list<uint16_t> tmpResult;
-            it->m_used = true;
-            if (getWords(tmpResult, number, position + it->m_number.size(), wordNumbers))
+            tmpNumbers.push_front(currIdx);
+            if (numbers.empty() || tmpNumbers.size() < numbers.size())
             {
-                tmpResult.push_front(std::distance(wordNumbers.begin(), it));
-                std::cout << "Adding " << it->m_word << '\n';
-                if (result.empty() || tmpResult.size() < result.size())
-                {
-                    result = std::move(tmpResult);
-                }
+                numbers = std::move(tmpNumbers);
             }
-            it->m_used = false;
+            if (1 == numbers.size())
+            {
+                currNumber->m_indices.push_back(currIdx);
+                break;
+            }
         }
-
-        ++ it;
+        currNumber->m_indices.push_back(currIdx);
     }
-
-    if (result.empty())
+    if (numbers.empty())
     {
-        std::cout << "Result is empty" << '\n';
         return false;
     }
-
     return true;
 }
 
@@ -119,24 +179,21 @@ void solve(std::istream& in, std::ostream& out)
     {
         uint16_t wordsCount;
         in >> wordsCount;
-        std::vector<WordNumber> wordNumbers(wordsCount);
+        std::vector<std::string> words(wordsCount);
+        NumberCount numberCount;
         for (uint16_t i = 0; i < wordsCount; ++i)
         {
-            in >> wordNumbers[i].m_word;
-            wordNumbers[i].m_number.reserve(wordNumbers[i].m_word.size() + 1);
-            std::transform(
-                wordNumbers[i].m_word.begin(), wordNumbers[i].m_word.end(),
-                std::back_inserter(wordNumbers[i].m_number), mapping);
-            //std::cout << wordNumbers[i].m_word << " -> " << wordNumbers[i].m_number << '\n';
+            in >> words[i];
+            numberCount.setNumber(words[i].c_str(), words[i].size(), i);
         }
-        std::sort(wordNumbers.begin(), wordNumbers.end());
+        numberCount.print(std::cout);
 
-        std::list<uint16_t> res;
-        if (getWords(res, number, 0, wordNumbers))
+        std::list<uint16_t> numbers;
+        if (getNumbers(numbers, number.c_str(), number.size(), numberCount, words))
         {
-            for (const auto idx : res)
+            for (auto idx : numbers)
             {
-                out << wordNumbers[idx].m_word << ' ';
+                out << words[idx] << ' ';
             }
             out << '\n';
         }

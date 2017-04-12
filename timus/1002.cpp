@@ -62,7 +62,7 @@ bool getWords(
     uint8_t position,
     std::vector<WordNumber>& wordNumbers)
 {
-    std::cout << "Number: " << number << "; position: " << (int32_t)position << '\n';
+    std::cout << "Number: " << number << "; position: " << (uint32_t)position << '\n';
     if (number.size() == position)
     {
         std::cout << "The end of the number is reached" << '\n';

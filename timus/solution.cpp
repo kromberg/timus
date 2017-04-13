@@ -9,39 +9,23 @@
 #include <array>
 #include <memory>
 
+#define LOG(ARGS...) 
+
 namespace n1002
 {
 
-static char mapping(char c)
+static uint16_t mapping(char c)
 {
-    static char charToNumber[] =
+    static uint16_t charToNumber[26] =
     {
-        '2', '2', '2',
-        '3', '3', '3',
-        '4', '4',
-        '1', '1',
-        '5', '5',
-        '6', '6',
-        '0',
-        '7',
-        '0',
-        '7', '7',
-        '8', '8', '8',
-        '9', '9', '9',
-        '0'
+        2, 2, 2, 3, 3, 3, 4, 4, 1, 1, 5, 5, 6, 6, 0, 7, 0, 7, 7, 8, 8, 8, 9, 9, 9, 0
     };
     return charToNumber[c - 'a'];
 }
 
-struct WordNumber
-{
-    std::string m_word;
-    std::string m_number;
-};
-
 struct NumberCount
 {
-    std::array<std::unique_ptr<NumberCount>, 10> m_numbers;
+    std::unique_ptr<NumberCount> m_numbers[10];
     std::list<uint16_t> m_indices;
 
     void setNumber(const char* word, const size_t size, const uint16_t index)
@@ -51,7 +35,7 @@ struct NumberCount
             m_indices.push_back(index);
             return ;
         }
-        uint16_t idx = static_cast<uint16_t>(mapping(*word) - '0');
+        uint16_t idx = mapping(*word);
         if (!m_numbers[idx])
         {
             m_numbers[idx].reset(new NumberCount);
@@ -59,10 +43,7 @@ struct NumberCount
         m_numbers[idx]->setNumber(word + 1, size - 1, index);
     }
 
-    void getNumbers(
-        std::list<NumberCount*>& res,
-        const char* number,
-        const size_t size)
+    void getNumbers(std::list<NumberCount*>& res, const char* number, const size_t size)
     {
         if (!m_indices.empty())
         {
@@ -74,7 +55,7 @@ struct NumberCount
             return ;
         }
 
-        uint16_t idx = static_cast<uint16_t>(*number - '0');
+        uint16_t idx = static_cast<uint16_t>((*number) - '0');
         if (!m_numbers[idx])
         {
             return ;
@@ -113,14 +94,15 @@ bool getNumbers(
     const char* number,
     const size_t size,
     NumberCount& numberCount,
-    std::vector<std::string>& words)
+    std::vector<std::string>& words,
+    const size_t resSize = 0)
 {
     if (0 == size)
     {
         return true;
     }
 
-    
+    LOG("Number: " << number << "; size: " << size << '\n');
 
     std::list<NumberCount*> currNumbers;
 
@@ -131,21 +113,23 @@ bool getNumbers(
         return false;
     }
 
-    
+    LOG(currNumbers.size() << " found\n");
 
     for (NumberCount* currNumberCount : currNumbers)
     {
-        uint16_t currIdx = currNumberCount->m_indices.front();
-        currNumberCount->m_indices.pop_front();
-        
+        const uint16_t currIdx = currNumberCount->m_indices.front();
+        LOG("Processing " << words[currIdx] << "\n");
 
         std::list<uint16_t> tmpNumbers;
-        bool res = getNumbers(tmpNumbers, number + words[currIdx].size(), size - words[currIdx].size(), numberCount, words);
-        currNumberCount->m_indices.push_front(currIdx);
+        //currNumberCount->m_indices.pop_front();
+        bool res = getNumbers(tmpNumbers, number + words[currIdx].size(), size - words[currIdx].size(), numberCount, words,
+            (0 == resSize) ? numbers.size() : resSize);
+        //currNumberCount->m_indices.push_front(currIdx);
 
         if (res)
         {
-            if (numbers.empty() || (numbers.size() > tmpNumbers.size() + 1))
+            if ((numbers.empty() || (numbers.size() > tmpNumbers.size() + 1)) &&
+                ((0 == resSize) || (resSize > tmpNumbers.size() + 1)))
             {
                 tmpNumbers.push_front(currIdx);
                 numbers = std::move(tmpNumbers);

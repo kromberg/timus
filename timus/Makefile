@@ -1,7 +1,7 @@
 TARGET = timus.out
 SOLUTION = solution.out
 CXX = clang++
-CXXFLAGS = -g -std=c++11 -O2
+CXXFLAGS = -g -std=c++11 -O2 -Wall -Wextra
 OBJS = main.o 1002.o
 SOLUTION_OBJS = solution.o
 

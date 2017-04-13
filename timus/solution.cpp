@@ -113,8 +113,7 @@ bool getNumbers(
     const char* number,
     const size_t size,
     NumberCount& numberCount,
-    std::vector<std::string>& words,
-    int16_t resultSize = 0)
+    std::vector<std::string>& words)
 {
     if (0 == size)
     {
@@ -134,29 +133,29 @@ bool getNumbers(
 
     
 
-    for (auto currNumber : currNumbers)
+    for (NumberCount* currNumberCount : currNumbers)
     {
-        uint16_t currIdx = currNumber->m_indices.front();
-        currNumber->m_indices.pop_front();
+        uint16_t currIdx = currNumberCount->m_indices.front();
+        currNumberCount->m_indices.pop_front();
         
+
         std::list<uint16_t> tmpNumbers;
-        
-        if (getNumbers(tmpNumbers, number + words[currIdx].size(), size - words[currIdx].size(), numberCount, words,
-            (resultSize == 0) ? numbers.size() : resultSize))
+        bool res = getNumbers(tmpNumbers, number + words[currIdx].size(), size - words[currIdx].size(), numberCount, words);
+        currNumberCount->m_indices.push_front(currIdx);
+
+        if (res)
         {
-            if ((resultSize == 0 || resultSize > tmpNumbers.size() + 1) &&
-                (numbers.empty() || tmpNumbers.size() + 1 < numbers.size()))
+            if (numbers.empty() || (numbers.size() > tmpNumbers.size() + 1))
             {
                 tmpNumbers.push_front(currIdx);
                 numbers = std::move(tmpNumbers);
             }
             if (1 == numbers.size())
             {
-                currNumber->m_indices.push_back(currIdx);
                 break;
             }
         }
-        currNumber->m_indices.push_back(currIdx);
+        
     }
     if (numbers.empty())
     {

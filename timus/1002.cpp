@@ -68,7 +68,7 @@ struct NumberCount
     {
         if (!m_indices.empty())
         {
-            res.push_back(this);
+            res.push_front(this);
         }
 
         if (0 == size)
@@ -123,11 +123,6 @@ bool getNumbers(
         return true;
     }
 
-    if (resultSize != 0 && resultSize <= numbers.size() + 1)
-    {
-        return false;
-    }
-
     std::cout << "Number: " << number << "; size: " << size << '\n';
 
     std::list<NumberCount*> currNumbers;
@@ -149,11 +144,12 @@ bool getNumbers(
         std::list<uint16_t> tmpNumbers;
         
         if (getNumbers(tmpNumbers, number + words[currIdx].size(), size - words[currIdx].size(), numberCount, words,
-            numbers.size()))
+            (resultSize == 0) ? numbers.size() : resultSize))
         {
-            tmpNumbers.push_front(currIdx);
-            if (numbers.empty() || tmpNumbers.size() < numbers.size())
+            if ((resultSize == 0 || resultSize > tmpNumbers.size() + 1) &&
+                (numbers.empty() || tmpNumbers.size() + 1 < numbers.size()))
             {
+                tmpNumbers.push_front(currIdx);
                 numbers = std::move(tmpNumbers);
             }
             if (1 == numbers.size())

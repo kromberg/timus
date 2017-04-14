@@ -46,25 +46,25 @@ struct NumberCount
         m_numbers[idx]->setNumber(word + 1, size - 1, index);
     }
 
-    void getNumbers(std::list<NumberCount*>& res, const char* number, const size_t size)
+    bool getNumber(uint16_t& numberIdx, const char* number, const size_t size)
     {
-        if (!m_indices.empty())
-        {
-            res.push_front(this);
-        }
-
         if (0 == size)
         {
-            return ;
+            if (!m_indices.empty())
+            {
+                numberIdx = m_indices.front();
+                return true;
+            }
+            return false;
         }
 
         uint16_t idx = static_cast<uint16_t>((*number) - '0');
         if (!m_numbers[idx])
         {
-            return ;
+            return false;
         }
 
-        m_numbers[idx]->getNumbers(res, number + 1, size - 1);
+        return m_numbers[idx]->getNumber(numberIdx, number + 1, size - 1);
     }
 
     void print(std::ostream& out, const std::string& spaces=std::string(""))
@@ -92,60 +92,73 @@ struct NumberCount
     }
 };
 
-bool getNumbers(
+struct Item
+{
+    uint16_t m_size;
+    uint16_t m_prevSize;
+    uint16_t m_idx;
+    Item(const size_t size):
+        m_size(size + 1),
+        m_prevSize(0),
+        m_idx(0)
+    {}
+};
+
+void getNumbers(
     std::list<uint16_t>& numbers,
     const char* number,
     const size_t size,
-    NumberCount& numberCount,
-    std::vector<std::string>& words)
+    NumberCount& numberCount)
 {
-    if (0 == size)
+    std::vector<Item> sizeToNumbers(size + 1, Item(size));
+
+    uint16_t numberIdx;
+    if (numberCount.getNumber(numberIdx, number, 1))
     {
-        return true;
+        sizeToNumbers[1].m_size = 1;
+        sizeToNumbers[1].m_idx = numberIdx;
     }
 
-    LOG("Number: " << number << "; size: " << size << '\n');
+    LOG('[' << 1 << "] = <" << sizeToNumbers[1].m_size << "; " << sizeToNumbers[1].m_idx << ">\n");
 
-    std::list<NumberCount*> currNumbers;
-
-    numberCount.getNumbers(currNumbers, number, size);
-
-    if (currNumbers.empty())
+    for (size_t currSize = 2; currSize <= size; ++currSize)
     {
-        return false;
-    }
-
-    LOG(currNumbers.size() << " found\n");
-
-    for (NumberCount* currNumberCount : currNumbers)
-    {
-        const uint16_t currIdx = currNumberCount->m_indices.front();
-        LOG("Processing " << words[currIdx] << "\n");
-
-        std::list<uint16_t> tmpNumbers;
-        currNumberCount->m_indices.pop_front();
-        bool res = getNumbers(tmpNumbers, number + words[currIdx].size(), size - words[currIdx].size(), numberCount, words);
-        currNumberCount->m_indices.push_front(currIdx);
-
-        if (res)
+        if (numberCount.getNumber(numberIdx, number, currSize))
         {
-            if (numbers.empty() || (numbers.size() > tmpNumbers.size() + 1))
-            {
-                tmpNumbers.push_front(currIdx);
-                numbers = std::move(tmpNumbers);
-            }
-            if (1 == numbers.size())
-            {
-                break;
-            }
+            sizeToNumbers[currSize].m_size = 1;
+            sizeToNumbers[currSize].m_idx = numberIdx;
         }
-        
+        for (size_t prevSize = 1; prevSize < currSize; ++prevSize)
+        {
+            if (sizeToNumbers[prevSize].m_size == size + 1) 
+            {
+                continue;
+            }
+            if (sizeToNumbers[prevSize].m_size + 1 >= sizeToNumbers[currSize].m_size)
+            {
+                continue;
+            }
+            if (!numberCount.getNumber(numberIdx, number + prevSize, currSize - prevSize))
+            {
+                continue;
+            }
+            sizeToNumbers[currSize].m_size = sizeToNumbers[prevSize].m_size + 1;
+            sizeToNumbers[currSize].m_prevSize = prevSize;
+            sizeToNumbers[currSize].m_idx = numberIdx;
+        }
+        LOG('[' << currSize << "] = <" << sizeToNumbers[currSize].m_size << "; " << sizeToNumbers[currSize].m_idx << ">\n");
     }
-    if (numbers.empty())
+
+    if (sizeToNumbers[size].m_size == size + 1)
     {
-        return false;
+        return ;
     }
-    return true;
+    size_t currSize = size;
+    while (currSize != 0)
+    {
+        numbers.push_front(sizeToNumbers[currSize].m_idx);
+        currSize = sizeToNumbers[currSize].m_prevSize;
+    }
 }
 
 void solve(std::istream& in, std::ostream& out)
@@ -165,7 +178,8 @@ void solve(std::istream& in, std::ostream& out)
         }
 
         std::list<uint16_t> numbers;
-        if (getNumbers(numbers, number.c_str(), number.size(), numberCount, words))
+        getNumbers(numbers, number.c_str(), number.size(), numberCount);
+        if (!numbers.empty())
         {
             for (auto idx : numbers)
             {
